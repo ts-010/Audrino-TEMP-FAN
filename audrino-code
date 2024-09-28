@@ -1,0 +1,97 @@
+#include "DHT.h"
+#include<LiquidCrystal.h>
+
+LiquidCrystal lcd(7, 6, 5, 4, 3, 2);
+
+#define DHTPIN 12    // Pin connected to the DHT sensor
+#define DHTTYPE DHT11 // DHT 11
+#define pwm 9        // PWM pin for controlling fan speed
+
+byte degree[8] = 
+              {
+                0b00011,
+                0b00011,
+                0b00000,
+                0b00000,
+                0b00000,
+                0b00000,
+                0b00000,
+                0b00000
+              };
+
+// Initialize DHT sensor
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup() {
+  lcd.begin(16, 2);
+  lcd.createChar(1, degree);
+  lcd.clear();
+  lcd.print("   Fan Speed  ");
+  lcd.setCursor(0,1);
+  lcd.print("  Controlling ");
+  delay(2000);
+  
+  pinMode(pwm, OUTPUT);  // Set PWM pin as output
+  analogWrite(pwm, 255); // Start fan at full speed (can be adjusted)
+  
+  lcd.clear();
+  lcd.print("Robu ");
+  delay(2000);
+  
+  Serial.begin(9600); 
+  dht.begin();  // Start DHT sensor
+}
+
+void loop() {
+  // Wait a few seconds between measurements.
+  delay(2000);
+
+  float h = dht.readHumidity();    // Reading humidity
+  float t = dht.readTemperature(); // Reading temperature in Celsius
+  
+  if (isnan(h) || isnan(t)) {
+    Serial.println("Failed to read from DHT sensor!");
+    return;
+  }
+
+  // Display on Serial Monitor
+  Serial.print("Humidity: "); 
+  Serial.print(h);
+  Serial.print(" %\t");
+  Serial.print("Temperature: "); 
+  Serial.print(t);
+  Serial.print(" *C\t");
+
+  // Display temperature on LCD
+  lcd.setCursor(0, 0);
+  lcd.print("Temp: ");
+  lcd.print(t);
+  lcd.write(1); // Degree symbol
+  lcd.print("C");
+
+  // Control fan speed based on temperature range
+  lcd.setCursor(0, 1);
+  
+  if (t < 20) {
+    analogWrite(pwm, 0);  // Turn fan off
+    lcd.print("Fan OFF        "); // Padding to clear old text
+  } 
+  else if (t >= 20 && t < 26) {
+    analogWrite(pwm, 102); // 40% speed
+    lcd.print("Fan Speed: 40% ");
+  } 
+  else if (t >= 26 && t < 28) {
+    analogWrite(pwm, 153); // 60% speed
+    lcd.print("Fan Speed: 60% ");
+  } 
+  else if (t >= 28 && t < 29) {
+    analogWrite(pwm, 204); // 80% speed
+    lcd.print("Fan Speed: 80% ");
+  } 
+  else if (t >= 29) {
+    analogWrite(pwm, 255); // 100% speed
+    lcd.print("Fan Speed: 100%");
+  }
+
+  delay(3000); // Delay before next temperature reading
+}
